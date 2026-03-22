@@ -48,6 +48,15 @@ const api = {
   >,
   getAvailableMonths: () => ipcRenderer.invoke('budget:months') as Promise<string[]>,
 
+  // Report
+  getMonthlyNecessary: (month: string) => ipcRenderer.invoke('report:monthly-necessary', month) as Promise<{
+    necessary: number; unnecessary: number; income: number
+  }>,
+  getAnnualTrend: (year: string) => ipcRenderer.invoke('report:annual-trend', year) as Promise<{
+    month: string; spent: number; income: number; saved: number
+  }[]>,
+  getAvailableYears: () => ipcRenderer.invoke('report:years') as Promise<string[]>,
+
   // Splitwise
   getSplitwiseExpenses: () => ipcRenderer.invoke('splitwise:expenses') as Promise<any[]>,
   getSplitwiseBalances: () => ipcRenderer.invoke('splitwise:balances') as Promise<Record<string, number>>,

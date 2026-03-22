@@ -302,6 +302,63 @@ export function getAvailableMonths(): string[] {
   return rows.map(r => r.month)
 }
 
+// ── Report queries ────────────────────────────────────
+
+export function getMonthlyNecessary(month: string): { necessary: number; unnecessary: number; income: number } {
+  const dateFrom = `${month}-01`
+  const [y, m] = month.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  const dateTo = `${month}-${String(lastDay).padStart(2, '0')}`
+
+  const rows = getDb().prepare(`
+    SELECT
+      SUM(CASE WHEN amount < 0 AND is_necessary = 1 THEN ABS(amount) ELSE 0 END) as necessary,
+      SUM(CASE WHEN amount < 0 AND (is_necessary = 0 OR is_necessary IS NULL) THEN ABS(amount) ELSE 0 END) as unnecessary,
+      SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income
+    FROM transactions
+    WHERE date >= ? AND date <= ?
+  `).get(dateFrom, dateTo) as any
+  return {
+    necessary: rows.necessary ?? 0,
+    unnecessary: rows.unnecessary ?? 0,
+    income: rows.income ?? 0,
+  }
+}
+
+export interface MonthlyTrend {
+  month: string
+  spent: number
+  income: number
+  saved: number
+}
+
+export function getAnnualTrend(year: string): MonthlyTrend[] {
+  const rows = getDb().prepare(`
+    SELECT
+      substr(date, 1, 7) as month,
+      SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as spent,
+      SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income
+    FROM transactions
+    WHERE substr(date, 1, 4) = ?
+    GROUP BY month
+    ORDER BY month ASC
+  `).all(year) as any[]
+
+  return rows.map(r => ({
+    month: r.month,
+    spent: r.spent ?? 0,
+    income: r.income ?? 0,
+    saved: (r.income ?? 0) - (r.spent ?? 0),
+  }))
+}
+
+export function getAvailableYears(): string[] {
+  const rows = getDb().prepare(`
+    SELECT DISTINCT substr(date, 1, 4) as year FROM transactions ORDER BY year DESC
+  `).all() as { year: string }[]
+  return rows.map(r => r.year)
+}
+
 // ── Splitwise queries ─────────────────────────────────
 
 export function getSplitwiseExpenses(): any[] {

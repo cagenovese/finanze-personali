@@ -66,6 +66,19 @@ export interface SpendingEntry {
   spent: number
 }
 
+export interface MonthlyNecessary {
+  necessary: number
+  unnecessary: number
+  income: number
+}
+
+export interface MonthlyTrend {
+  month: string
+  spent: number
+  income: number
+  saved: number
+}
+
 export interface SplitwiseExpense {
   id: number
   hash: string
@@ -97,6 +110,9 @@ declare global {
       setBudget: (category: string, month: string, amount: number) => Promise<boolean>
       getSpending: (month: string) => Promise<SpendingEntry[]>
       getAvailableMonths: () => Promise<string[]>
+      getMonthlyNecessary: (month: string) => Promise<MonthlyNecessary>
+      getAnnualTrend: (year: string) => Promise<MonthlyTrend[]>
+      getAvailableYears: () => Promise<string[]>
       getSplitwiseExpenses: () => Promise<SplitwiseExpense[]>
       getSplitwiseBalances: () => Promise<Record<string, number>>
     }
@@ -122,5 +138,8 @@ export const getBudgets = (m: string) => api.getBudgets(m)
 export const setBudget = (cat: string, month: string, amount: number) => api.setBudget(cat, month, amount)
 export const getSpending = (m: string) => api.getSpending(m)
 export const getAvailableMonths = () => api.getAvailableMonths()
+export const getMonthlyNecessary = (month: string) => api.getMonthlyNecessary(month)
+export const getAnnualTrend = (year: string) => api.getAnnualTrend(year)
+export const getAvailableYears = () => api.getAvailableYears()
 export const getSplitwiseExpenses = () => api.getSplitwiseExpenses()
 export const getSplitwiseBalances = () => api.getSplitwiseBalances()

@@ -5,6 +5,7 @@ import {
   getTransactions, updateTransaction,
   getCategories, updateCategoryKeywords,
   getBudgets, setBudget, getSpendingByCategory, getAvailableMonths,
+  getMonthlyNecessary, getAnnualTrend, getAvailableYears,
   getSplitwiseExpenses, getSplitwiseBalances,
   closeDb,
   type TransactionFilters,
@@ -100,6 +101,19 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('budget:months', () => {
     return getAvailableMonths()
+  })
+
+  // ── Report ────────────────────────────────────────
+  ipcMain.handle('report:monthly-necessary', (_event, month: string) => {
+    return getMonthlyNecessary(month)
+  })
+
+  ipcMain.handle('report:annual-trend', (_event, year: string) => {
+    return getAnnualTrend(year)
+  })
+
+  ipcMain.handle('report:years', () => {
+    return getAvailableYears()
   })
 
   // ── Splitwise ─────────────────────────────────────
