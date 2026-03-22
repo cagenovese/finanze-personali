@@ -1,11 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.venv/
-venv/
-env/
-*.egg-info/
+# Dependencies
+node_modules/
+
+# Build output
+out/
 dist/
 build/
 
@@ -26,5 +23,5 @@ Thumbs.db
 .vscode/
 *.swp
 
-# Streamlit
-.streamlit/secrets.toml
+# Logs
+*.log

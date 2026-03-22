@@ -124,6 +124,26 @@ finanze-personali/
 
 **Prossima fase:** Fase 2 — Parsers + Import (modello consigliato: **Opus 4.6**)
 
+### Fase 2 — Parsers + Import ✅ (2026-03-22)
+
+**Completato:**
+- SQLite schema: transactions (hash dedup), categories (keyword seeding), budgets, splitwise_expenses, import_log
+- 6 parser: N26, Revolut, Commerzbank, AMEX, Trade Republic (PDF via pdfjs-dist), Splitwise
+- IPC wiring: main.ts handler → preload.ts bridge → src/lib/ipc.ts typed client
+- Import page UI: card per sorgente con icona, bottone import singolo/tutti, indicatore stato, storico importazioni
+- better-sqlite3 rebuilt per Electron via @electron/rebuild
+- Build e dev mode funzionanti
+
+**Note tecniche:**
+- Trade Republic esporta PDF (non CSV): il parser usa pdfjs-dist, estrae testo posizionale, regex sulla sezione UMSATZÜBERSICHT
+- pdf-parse v2 ha API diversa dal v1 (classe PDFParse, non function default). Usato pdfjs-dist direttamente via dynamic import
+- Commerzbank: separatore `;`, decimale `,` — parseEuropeanAmount gestisce conversione
+- AMEX: importi positivi nel CSV = spese → negati nel DB (negative = expense)
+- Splitwise: colonne persona dinamiche, dati in tabella separata splitwise_expenses con balances JSON
+- Deduplicazione: hash SHA-256 troncato a 16 char su (source + date + description + amount)
+
+**Prossima fase:** Fase 3 — Transazioni + Categorizzazione (modello consigliato: **Opus 4.6**)
+
 ## GitHub
 
 - Repo: https://github.com/cagenovese/finanze-personali

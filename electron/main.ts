@@ -1,5 +1,7 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { getDb, getImportHistory, getTransactionCount, closeDb } from './db'
+import { importSource, getSourceConfig, type SourceId } from './parsers'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -25,7 +27,33 @@ function createWindow(): void {
   }
 }
 
+function registerIpcHandlers(): void {
+  // ── DB status ──────────────────────────────────────
+  ipcMain.handle('db:stats', () => {
+    return { transactionCount: getTransactionCount() }
+  })
+
+  // ── Sources config ─────────────────────────────────
+  ipcMain.handle('import:sources', () => {
+    return getSourceConfig()
+  })
+
+  // ── Import from a source ───────────────────────────
+  ipcMain.handle('import:run', async (_event, sourceId: SourceId) => {
+    return importSource(sourceId)
+  })
+
+  // ── Import history ─────────────────────────────────
+  ipcMain.handle('import:history', () => {
+    return getImportHistory()
+  })
+}
+
 app.whenReady().then(() => {
+  // Initialise DB on startup
+  getDb()
+
+  registerIpcHandlers()
   createWindow()
 
   app.on('activate', () => {
@@ -35,4 +63,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('before-quit', () => {
+  closeDb()
 })
