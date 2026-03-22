@@ -20,6 +20,9 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: resolve(__dirname, 'electron/preload.ts'),
+        output: {
+          entryFileNames: 'index.js',
+        },
       },
     },
     plugins: [externalizeDepsPlugin()],

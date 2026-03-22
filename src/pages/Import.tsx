@@ -156,7 +156,7 @@ export default function Import() {
                 </tr>
               </thead>
               <tbody>
-                {history.slice(0, 20).map(entry => (
+                {history.slice(0, 50).map(entry => (
                   <tr key={entry.id} className="border-b border-bg-elevated last:border-none">
                     <td className="py-2 px-4 text-text-muted font-mono text-xs">
                       {entry.timestamp}

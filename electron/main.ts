@@ -1,7 +1,14 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { getDb, getImportHistory, getTransactionCount, closeDb } from './db'
+import {
+  getDb, getImportHistory, getTransactionCount,
+  getTransactions, updateTransaction,
+  getCategories, updateCategoryKeywords,
+  closeDb,
+  type TransactionFilters,
+} from './db'
 import { importSource, getSourceConfig, type SourceId } from './parsers'
+import { autoCategorize } from './categorizer'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -46,6 +53,33 @@ function registerIpcHandlers(): void {
   // ── Import history ─────────────────────────────────
   ipcMain.handle('import:history', () => {
     return getImportHistory()
+  })
+
+  // ── Transactions ──────────────────────────────────
+  ipcMain.handle('transactions:list', (_event, filters: TransactionFilters) => {
+    return getTransactions(filters)
+  })
+
+  ipcMain.handle('transactions:update', (_event, id: number, fields: {
+    category?: string | null; is_necessary?: number | null; notes?: string | null
+  }) => {
+    updateTransaction(id, fields)
+    return true
+  })
+
+  // ── Categories ────────────────────────────────────
+  ipcMain.handle('categories:list', () => {
+    return getCategories()
+  })
+
+  ipcMain.handle('categories:updateKeywords', (_event, id: number, keywords: string[]) => {
+    updateCategoryKeywords(id, keywords)
+    return true
+  })
+
+  // ── Auto-categorization ───────────────────────────
+  ipcMain.handle('categorize:run', () => {
+    return { categorized: autoCategorize() }
   })
 }
 

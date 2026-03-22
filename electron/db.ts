@@ -82,28 +82,48 @@ function initSchema(db: Database.Database): void {
   seedCategories(db)
 }
 
+const CATEGORIES: [string, string[]][] = [
+  ['Cibo',            ['LIDL', 'UBER EATS', 'PIZZA', 'RISTORANTE', 'TRATTORIA', 'RIFUGIO', 'BAR ',
+                       'CONAD', 'EDEKA', 'REWE', 'ALDI', 'HAFERKATER', 'BAECKER', 'REICHELT',
+                       'NAHKAUF', 'FARMERS KITCHEN', 'BURGERMEISTER', 'KORO', 'CUPESSE',
+                       'KASCHK', 'PASTICCERIA', 'DOLOMITI', 'LEON DORO', 'SOTTOPASSO',
+                       'VITELLI', 'BAI DE DONES', 'POMEDES', 'SOCREPES', 'ENOTECA']],
+  ['Salute',          ['FARMACIA', 'KRANKENVERS', 'OTTONOVA', 'LABOR 28', 'MVZ', 'APOTHEKE']],
+  ['Sport',           ['SKIPASS', 'SNOW SERVICE', 'GYM', 'DECATHLON', 'URBAN SPORTS', 'STAR SKI',
+                       'TENNIS', 'DER BERG RUFT']],
+  ['Trasporti',       ['ATM', 'TRENORD', 'ENI', 'BOLT', 'BVG', 'TAXI', 'UBER TRIP',
+                       'DB VERTRIEB', 'DB FERNVERKEHR', 'FLUGHAFEN', 'TANKSTELLE']],
+  ['Intrattenimento', ['NETFLIX', 'SPOTIFY', 'AMZN', 'AMAZON', 'CINEMA']],
+  ['Abbigliamento',   ['ZARA', 'H&M']],
+  ['Viaggi',          ['BOOKING', 'RYANAIR', 'HOTEL', 'EASYJET', 'THE NIU', 'AIRBNB',
+                       'DUFRITAL', 'LS TRAVEL']],
+  ['Servizi',         ['ENEL', 'VODAFONE', 'APPLE.COM', 'VATTENFALL', 'TELEFONICA', 'O2']],
+  ['Casa',            ['AFFITTO', 'IKEA']],
+  ['Apprendimento',   ['UDEMY', 'COURSERA']],
+  ['Tasse',           ['ADAC', 'VERSICHERUNG', 'RUNDFUNK', 'ACCOUNT MANAGEMENT']],
+  ['Altro',           []],
+]
+
 function seedCategories(db: Database.Database): void {
   const count = db.prepare('SELECT COUNT(*) as c FROM categories').get() as { c: number }
-  if (count.c > 0) return
-
-  const categories: [string, string[]][] = [
-    ['Cibo',            ['LIDL', 'UBER EATS', 'PIZZA', 'RISTORANTE', 'TRATTORIA', 'RIFUGIO', 'BAR ', 'CONAD', 'EDEKA', 'REWE', 'ALDI']],
-    ['Salute',          ['FARMACIA', 'KRANKENVERS', 'OTTONOVA']],
-    ['Sport',           ['SKIPASS', 'SNOW SERVICE', 'GYM', 'DECATHLON']],
-    ['Trasporti',       ['ATM', 'TRENORD', 'ENI', 'BOLT', 'BVG', 'TAXI']],
-    ['Intrattenimento', ['NETFLIX', 'SPOTIFY', 'AMAZON', 'CINEMA']],
-    ['Abbigliamento',   ['ZARA', 'H&M']],
-    ['Viaggi',          ['BOOKING', 'RYANAIR', 'HOTEL']],
-    ['Servizi',         ['ENEL', 'VODAFONE', 'APPLE.COM']],
-    ['Casa',            ['AFFITTO', 'IKEA']],
-    ['Apprendimento',   ['UDEMY', 'COURSERA']],
-    ['Tasse',           ['ADAC', 'VERSICHERUNG', 'RUNDFUNK']],
-    ['Altro',           []],
-  ]
+  const isUpdate = count.c > 0
+  if (isUpdate) {
+    // Update existing keywords to the latest set
+    const upsert = db.prepare('UPDATE categories SET keywords = ? WHERE name = ?')
+    const insertNew = db.prepare('INSERT OR IGNORE INTO categories (name, keywords) VALUES (?, ?)')
+    const tx = db.transaction((cats: [string, string[]][]) => {
+      for (const [name, keywords] of cats) {
+        upsert.run(JSON.stringify(keywords), name)
+        insertNew.run(name, JSON.stringify(keywords))
+      }
+    })
+    tx(CATEGORIES)
+    return
+  }
 
   const insert = db.prepare('INSERT OR IGNORE INTO categories (name, keywords) VALUES (?, ?)')
   const tx = db.transaction(() => {
-    for (const [name, keywords] of categories) {
+    for (const [name, keywords] of CATEGORIES) {
       insert.run(name, JSON.stringify(keywords))
     }
   })
@@ -161,6 +181,88 @@ export function getImportHistory(): any[] {
 
 export function getTransactionCount(): number {
   return (getDb().prepare('SELECT COUNT(*) as c FROM transactions').get() as { c: number }).c
+}
+
+// ── Transaction queries ───────────────────────────────
+
+export interface TransactionFilters {
+  source?: string
+  category?: string
+  search?: string
+  dateFrom?: string
+  dateTo?: string
+  uncategorizedOnly?: boolean
+}
+
+export function getTransactions(filters: TransactionFilters = {}): any[] {
+  const db = getDb()
+  const conditions: string[] = []
+  const params: any[] = []
+
+  if (filters.source) {
+    conditions.push('source = ?')
+    params.push(filters.source)
+  }
+  if (filters.category) {
+    conditions.push('category = ?')
+    params.push(filters.category)
+  }
+  if (filters.uncategorizedOnly) {
+    conditions.push('category IS NULL')
+  }
+  if (filters.search) {
+    conditions.push('UPPER(description) LIKE ?')
+    params.push(`%${filters.search.toUpperCase()}%`)
+  }
+  if (filters.dateFrom) {
+    conditions.push('date >= ?')
+    params.push(filters.dateFrom)
+  }
+  if (filters.dateTo) {
+    conditions.push('date <= ?')
+    params.push(filters.dateTo)
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  return db.prepare(`SELECT * FROM transactions ${where} ORDER BY date DESC, id DESC`).all(...params)
+}
+
+export function updateTransaction(
+  id: number,
+  fields: { category?: string | null; is_necessary?: number | null; notes?: string | null }
+): void {
+  const db = getDb()
+  const sets: string[] = []
+  const params: any[] = []
+
+  if ('category' in fields) {
+    sets.push('category = ?')
+    params.push(fields.category ?? null)
+  }
+  if ('is_necessary' in fields) {
+    sets.push('is_necessary = ?')
+    params.push(fields.is_necessary ?? null)
+  }
+  if ('notes' in fields) {
+    sets.push('notes = ?')
+    params.push(fields.notes ?? null)
+  }
+
+  if (sets.length === 0) return
+  params.push(id)
+  db.prepare(`UPDATE transactions SET ${sets.join(', ')} WHERE id = ?`).run(...params)
+}
+
+// ── Category queries ──────────────────────────────────
+
+export function getCategories(): { id: number; name: string; keywords: string[] }[] {
+  const db = getDb()
+  const rows = db.prepare('SELECT * FROM categories ORDER BY name').all() as any[]
+  return rows.map(r => ({ id: r.id, name: r.name, keywords: JSON.parse(r.keywords) }))
+}
+
+export function updateCategoryKeywords(id: number, keywords: string[]): void {
+  getDb().prepare('UPDATE categories SET keywords = ? WHERE id = ?').run(JSON.stringify(keywords), id)
 }
 
 export function closeDb(): void {

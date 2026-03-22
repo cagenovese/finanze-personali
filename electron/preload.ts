@@ -14,9 +14,28 @@ const api = {
     totalImported: number
     totalSkipped: number
   }>,
-  getImportHistory: () => ipcRenderer.invoke('import:history') as Promise<
-    { id: number; timestamp: string; source: string; file_name: string; records_imported: number; records_skipped: number }[]
+  getImportHistory: () => ipcRenderer.invoke('import:history') as Promise<any[]>,
+
+  // Transactions
+  getTransactions: (filters?: {
+    source?: string; category?: string; search?: string;
+    dateFrom?: string; dateTo?: string; uncategorizedOnly?: boolean;
+  }) => ipcRenderer.invoke('transactions:list', filters ?? {}) as Promise<any[]>,
+
+  updateTransaction: (id: number, fields: {
+    category?: string | null; is_necessary?: number | null; notes?: string | null;
+  }) => ipcRenderer.invoke('transactions:update', id, fields) as Promise<boolean>,
+
+  // Categories
+  getCategories: () => ipcRenderer.invoke('categories:list') as Promise<
+    { id: number; name: string; keywords: string[] }[]
   >,
+
+  updateCategoryKeywords: (id: number, keywords: string[]) =>
+    ipcRenderer.invoke('categories:updateKeywords', id, keywords) as Promise<boolean>,
+
+  // Auto-categorization
+  runCategorization: () => ipcRenderer.invoke('categorize:run') as Promise<{ categorized: number }>,
 }
 
 contextBridge.exposeInMainWorld('api', api)

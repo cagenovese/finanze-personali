@@ -144,6 +144,24 @@ finanze-personali/
 
 **Prossima fase:** Fase 3 — Transazioni + Categorizzazione (modello consigliato: **Opus 4.6**)
 
+### Fase 3 — Transazioni + Categorizzazione ✅ (2026-03-22)
+
+**Completato:**
+- Categorizer engine (electron/categorizer.ts): keyword matching case-insensitive, auto-categorizza transazioni senza categoria
+- Keyword set ampliato (~80 keyword): aggiunto HAFERKATER, REICHELT, FARMERS KITCHEN, UBER TRIP, DB VERTRIEB, EASYJET, VATTENFALL, TELEFONICA, URBAN SPORTS, ecc.
+- Le keyword nel DB vengono aggiornate ad ogni avvio (non solo al seed iniziale)
+- TanStack Table: tabella transazioni con sorting per colonna
+- Inline editing: click su categoria → dropdown, click su Nec. → cicla S/N/·
+- Filtri: ricerca descrizione, fonte, mese (YYYY-MM), categoria
+- IPC handlers: transactions:list, transactions:update, categories:list, categories:updateKeywords, categorize:run
+
+**Note tecniche:**
+- Il preload output deve chiamarsi `index.js` (aggiunto rollupOptions.output.entryFileNames nel config electron-vite)
+- Il seed delle categorie ora fa UPDATE se le categorie esistono già (upgrade delle keyword su DB esistente)
+- Il filtro mese calcola dateFrom/dateTo dal YYYY-MM selezionato
+
+**Prossima fase:** Fase 4 — Budget + Splitwise (modello consigliato: **Opus 4.6**)
+
 ## GitHub
 
 - Repo: https://github.com/cagenovese/finanze-personali
