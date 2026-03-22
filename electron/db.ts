@@ -265,6 +265,68 @@ export function updateCategoryKeywords(id: number, keywords: string[]): void {
   getDb().prepare('UPDATE categories SET keywords = ? WHERE id = ?').run(JSON.stringify(keywords), id)
 }
 
+// ── Budget queries ────────────────────────────────────
+
+export function getBudgets(month: string): { category: string; budget: number }[] {
+  return getDb()
+    .prepare('SELECT category, amount as budget FROM budgets WHERE month = ? ORDER BY category')
+    .all(month) as any[]
+}
+
+export function setBudget(category: string, month: string, amount: number): void {
+  getDb().prepare(`
+    INSERT INTO budgets (category, month, amount) VALUES (?, ?, ?)
+    ON CONFLICT(category, month) DO UPDATE SET amount = excluded.amount
+  `).run(category, month, amount)
+}
+
+export function getSpendingByCategory(month: string): { category: string; spent: number }[] {
+  const dateFrom = `${month}-01`
+  const [y, m] = month.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  const dateTo = `${month}-${String(lastDay).padStart(2, '0')}`
+
+  return getDb().prepare(`
+    SELECT category, SUM(ABS(amount)) as spent
+    FROM transactions
+    WHERE date >= ? AND date <= ? AND amount < 0 AND category IS NOT NULL
+    GROUP BY category
+    ORDER BY category
+  `).all(dateFrom, dateTo) as any[]
+}
+
+export function getAvailableMonths(): string[] {
+  const rows = getDb().prepare(`
+    SELECT DISTINCT substr(date, 1, 7) as month FROM transactions ORDER BY month DESC
+  `).all() as { month: string }[]
+  return rows.map(r => r.month)
+}
+
+// ── Splitwise queries ─────────────────────────────────
+
+export function getSplitwiseExpenses(): any[] {
+  return getDb().prepare(`
+    SELECT * FROM splitwise_expenses ORDER BY date DESC
+  `).all().map((r: any) => ({
+    ...r,
+    balances: JSON.parse(r.balances),
+  }))
+}
+
+export function getSplitwiseBalances(): Record<string, number> {
+  const rows = getDb().prepare('SELECT balances FROM splitwise_expenses').all() as { balances: string }[]
+  const totals: Record<string, number> = {}
+
+  for (const row of rows) {
+    const balances = JSON.parse(row.balances)
+    for (const [person, amount] of Object.entries(balances)) {
+      totals[person] = (totals[person] || 0) + (amount as number)
+    }
+  }
+
+  return totals
+}
+
 export function closeDb(): void {
   if (db) {
     db.close()

@@ -56,6 +56,27 @@ export interface Category {
   keywords: string[]
 }
 
+export interface BudgetEntry {
+  category: string
+  budget: number
+}
+
+export interface SpendingEntry {
+  category: string
+  spent: number
+}
+
+export interface SplitwiseExpense {
+  id: number
+  hash: string
+  date: string
+  description: string
+  category: string | null
+  total_cost: number
+  currency: string
+  balances: Record<string, number>
+}
+
 // ── Window API declaration ────────────────────────────
 
 declare global {
@@ -72,6 +93,12 @@ declare global {
       getCategories: () => Promise<Category[]>
       updateCategoryKeywords: (id: number, keywords: string[]) => Promise<boolean>
       runCategorization: () => Promise<{ categorized: number }>
+      getBudgets: (month: string) => Promise<BudgetEntry[]>
+      setBudget: (category: string, month: string, amount: number) => Promise<boolean>
+      getSpending: (month: string) => Promise<SpendingEntry[]>
+      getAvailableMonths: () => Promise<string[]>
+      getSplitwiseExpenses: () => Promise<SplitwiseExpense[]>
+      getSplitwiseBalances: () => Promise<Record<string, number>>
     }
   }
 }
@@ -91,3 +118,9 @@ export const updateTransaction = (id: number, fields: {
 export const getCategories = () => api.getCategories()
 export const updateCategoryKeywords = (id: number, kw: string[]) => api.updateCategoryKeywords(id, kw)
 export const runCategorization = () => api.runCategorization()
+export const getBudgets = (m: string) => api.getBudgets(m)
+export const setBudget = (cat: string, month: string, amount: number) => api.setBudget(cat, month, amount)
+export const getSpending = (m: string) => api.getSpending(m)
+export const getAvailableMonths = () => api.getAvailableMonths()
+export const getSplitwiseExpenses = () => api.getSplitwiseExpenses()
+export const getSplitwiseBalances = () => api.getSplitwiseBalances()

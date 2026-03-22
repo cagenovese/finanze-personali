@@ -4,6 +4,8 @@ import {
   getDb, getImportHistory, getTransactionCount,
   getTransactions, updateTransaction,
   getCategories, updateCategoryKeywords,
+  getBudgets, setBudget, getSpendingByCategory, getAvailableMonths,
+  getSplitwiseExpenses, getSplitwiseBalances,
   closeDb,
   type TransactionFilters,
 } from './db'
@@ -80,6 +82,33 @@ function registerIpcHandlers(): void {
   // ── Auto-categorization ───────────────────────────
   ipcMain.handle('categorize:run', () => {
     return { categorized: autoCategorize() }
+  })
+
+  // ── Budget ────────────────────────────────────────
+  ipcMain.handle('budget:get', (_event, month: string) => {
+    return getBudgets(month)
+  })
+
+  ipcMain.handle('budget:set', (_event, category: string, month: string, amount: number) => {
+    setBudget(category, month, amount)
+    return true
+  })
+
+  ipcMain.handle('budget:spending', (_event, month: string) => {
+    return getSpendingByCategory(month)
+  })
+
+  ipcMain.handle('budget:months', () => {
+    return getAvailableMonths()
+  })
+
+  // ── Splitwise ─────────────────────────────────────
+  ipcMain.handle('splitwise:expenses', () => {
+    return getSplitwiseExpenses()
+  })
+
+  ipcMain.handle('splitwise:balances', () => {
+    return getSplitwiseBalances()
   })
 }
 

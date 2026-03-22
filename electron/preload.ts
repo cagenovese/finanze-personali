@@ -36,6 +36,21 @@ const api = {
 
   // Auto-categorization
   runCategorization: () => ipcRenderer.invoke('categorize:run') as Promise<{ categorized: number }>,
+
+  // Budget
+  getBudgets: (month: string) => ipcRenderer.invoke('budget:get', month) as Promise<
+    { category: string; budget: number }[]
+  >,
+  setBudget: (category: string, month: string, amount: number) =>
+    ipcRenderer.invoke('budget:set', category, month, amount) as Promise<boolean>,
+  getSpending: (month: string) => ipcRenderer.invoke('budget:spending', month) as Promise<
+    { category: string; spent: number }[]
+  >,
+  getAvailableMonths: () => ipcRenderer.invoke('budget:months') as Promise<string[]>,
+
+  // Splitwise
+  getSplitwiseExpenses: () => ipcRenderer.invoke('splitwise:expenses') as Promise<any[]>,
+  getSplitwiseBalances: () => ipcRenderer.invoke('splitwise:balances') as Promise<Record<string, number>>,
 }
 
 contextBridge.exposeInMainWorld('api', api)
