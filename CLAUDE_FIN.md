@@ -162,6 +162,40 @@ finanze-personali/
 
 **Prossima fase:** Fase 4 — Budget + Splitwise (modello consigliato: **Opus 4.6**)
 
+### Fase 4 — Budget + Splitwise ✅ (2026-03-22)
+
+**Completato:**
+- DB queries: getBudgets, setBudget, getSpendingByCategory, getAvailableMonths, getSplitwiseExpenses, getSplitwiseBalances
+- IPC handlers: budget:get, budget:set, budget:spending, budget:months, splitwise:expenses, splitwise:balances
+- Budget page: selettore mese, card riepilogo (totale/speso/rimanente), righe per categoria con budget editabile inline e progress bar
+- Splitwise page: bilancio utente, bilanci per persona (dare/ricevere), tabella spese con saldo per spesa
+
+**Note tecniche:**
+- Budget usa UPSERT (INSERT ON CONFLICT DO UPDATE) per la tabella budgets (UNIQUE su category+month)
+- Spending calcolato come SUM(ABS(amount)) dove amount < 0 (solo spese) raggruppato per categoria
+- Splitwise bilanci: somma di tutti i balances JSON per persona su tutte le spese
+- USER_NAME hardcoded "Carlo Alberto Genovese" per il bilancio utente — da rendere configurabile in futuro
+- I numeri Splitwise potrebbero necessitare revisione (segnalato dall'utente come "strani")
+
+**Prossima fase:** Fase 5 — Report + Dashboard (modello consigliato: **Sonnet 4.6**)
+
+### Fase 5 — Report + Dashboard ✅ (2026-03-22)
+
+**Completato:**
+- Recharts installato
+- DB queries: getMonthlyNecessary, getAnnualTrend, getAvailableYears
+- IPC handlers: report:monthly-necessary, report:annual-trend, report:years
+- Dashboard: selettore anno, KPI cards (entrate/spese/risparmio/media), bar chart risparmio mensile (verde/rosso), bar chart entrate vs spese, mese più costoso, mesi con risparmio positivo
+- MonthlyReport: selettore mese, KPI cards, pie chart spese per categoria, pie chart necessarie vs non necessarie, dettaglio categorie con progress bar
+
+**Note tecniche:**
+- `getSpendingByCategory` già esposta come `getSpending` nel preload — usata direttamente nel Report
+- Colori hardcoded array di 12 tinte Obsidian-compatibili per i pie chart
+- USER_NAME hardcoded in Splitwise.tsx — da rendere configurabile in futuro
+- Piccoli dettagli UI da correggere in sessioni successive (segnalati dall'utente)
+
+**Prossima fase:** da definire — possibili miglioramenti: fix Splitwise bilanci, fix Trade Republic PDF, configurazione USER_NAME, inserimento spese manuali, ATM split
+
 ## GitHub
 
 - Repo: https://github.com/cagenovese/finanze-personali
