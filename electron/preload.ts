@@ -26,6 +26,14 @@ const api = {
     category?: string | null; is_necessary?: number | null; notes?: string | null;
   }) => ipcRenderer.invoke('transactions:update', id, fields) as Promise<boolean>,
 
+  addManualTransaction: (tx: {
+    date: string; description: string; amount: number; category: string | null; notes: string | null
+  }) => ipcRenderer.invoke('transactions:add-manual', tx) as Promise<number>,
+
+  splitTransaction: (parentId: number, splits: {
+    description: string; amount: number; category: string | null
+  }[]) => ipcRenderer.invoke('transactions:split', parentId, splits) as Promise<boolean>,
+
   // Categories
   getCategories: () => ipcRenderer.invoke('categories:list') as Promise<
     { id: number; name: string; keywords: string[] }[]

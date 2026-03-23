@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import {
   getDb, getImportHistory, getTransactionCount,
-  getTransactions, updateTransaction,
+  getTransactions, updateTransaction, addManualTransaction, splitTransaction,
   getCategories, updateCategoryKeywords,
   getBudgets, setBudget, getSpendingByCategory, getAvailableMonths,
   getMonthlyNecessary, getAnnualTrend, getAvailableYears,
@@ -67,6 +67,19 @@ function registerIpcHandlers(): void {
     category?: string | null; is_necessary?: number | null; notes?: string | null
   }) => {
     updateTransaction(id, fields)
+    return true
+  })
+
+  ipcMain.handle('transactions:add-manual', (_event, tx: {
+    date: string; description: string; amount: number; category: string | null; notes: string | null
+  }) => {
+    return addManualTransaction(tx)
+  })
+
+  ipcMain.handle('transactions:split', (_event, parentId: number, splits: {
+    description: string; amount: number; category: string | null
+  }[]) => {
+    splitTransaction(parentId, splits)
     return true
   })
 

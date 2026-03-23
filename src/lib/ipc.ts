@@ -39,6 +39,8 @@ export interface Transaction {
   is_necessary: number | null
   notes: string | null
   created_at: string
+  is_split: number
+  split_from: number | null
 }
 
 export interface TransactionFilters {
@@ -103,6 +105,12 @@ declare global {
       updateTransaction: (id: number, fields: {
         category?: string | null; is_necessary?: number | null; notes?: string | null
       }) => Promise<boolean>
+      addManualTransaction: (tx: {
+        date: string; description: string; amount: number; category: string | null; notes: string | null
+      }) => Promise<number>
+      splitTransaction: (parentId: number, splits: {
+        description: string; amount: number; category: string | null
+      }[]) => Promise<boolean>
       getCategories: () => Promise<Category[]>
       updateCategoryKeywords: (id: number, keywords: string[]) => Promise<boolean>
       runCategorization: () => Promise<{ categorized: number }>
@@ -131,6 +139,12 @@ export const getTransactions = (f?: TransactionFilters) => api.getTransactions(f
 export const updateTransaction = (id: number, fields: {
   category?: string | null; is_necessary?: number | null; notes?: string | null
 }) => api.updateTransaction(id, fields)
+export const addManualTransaction = (tx: {
+  date: string; description: string; amount: number; category: string | null; notes: string | null
+}) => api.addManualTransaction(tx)
+export const splitTransaction = (parentId: number, splits: {
+  description: string; amount: number; category: string | null
+}[]) => api.splitTransaction(parentId, splits)
 export const getCategories = () => api.getCategories()
 export const updateCategoryKeywords = (id: number, kw: string[]) => api.updateCategoryKeywords(id, kw)
 export const runCategorization = () => api.runCategorization()

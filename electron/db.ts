@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
+import { createHash } from 'crypto'
 
 let db: Database.Database | null = null
 
@@ -79,7 +80,18 @@ function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
   `)
 
+  migrateSchema(db)
   seedCategories(db)
+}
+
+function migrateSchema(db: Database.Database): void {
+  const cols = (db.prepare('PRAGMA table_info(transactions)').all() as any[]).map((c: any) => c.name)
+  if (!cols.includes('is_split')) {
+    db.exec('ALTER TABLE transactions ADD COLUMN is_split INTEGER NOT NULL DEFAULT 0')
+  }
+  if (!cols.includes('split_from')) {
+    db.exec('ALTER TABLE transactions ADD COLUMN split_from INTEGER')
+  }
 }
 
 const CATEGORIES: [string, string[]][] = [
@@ -289,10 +301,46 @@ export function getSpendingByCategory(month: string): { category: string; spent:
   return getDb().prepare(`
     SELECT category, SUM(ABS(amount)) as spent
     FROM transactions
-    WHERE date >= ? AND date <= ? AND amount < 0 AND category IS NOT NULL
+    WHERE date >= ? AND date <= ? AND amount < 0 AND category IS NOT NULL AND is_split = 0
     GROUP BY category
     ORDER BY category
   `).all(dateFrom, dateTo) as any[]
+}
+
+export function addManualTransaction(tx: {
+  date: string; description: string; amount: number; category: string | null; notes: string | null
+}): number {
+  const hash = createHash('sha256')
+    .update(`manual-${tx.date}-${tx.description}-${tx.amount}-${Date.now()}`)
+    .digest('hex').slice(0, 16)
+  const result = getDb().prepare(`
+    INSERT INTO transactions (hash, date, description, amount, currency, source, category, notes)
+    VALUES (?, ?, ?, ?, 'EUR', 'Manuale', ?, ?)
+  `).run(hash, tx.date, tx.description, tx.amount, tx.category ?? null, tx.notes ?? null)
+  return result.lastInsertRowid as number
+}
+
+export function splitTransaction(
+  parentId: number,
+  splits: { description: string; amount: number; category: string | null }[]
+): void {
+  const db = getDb()
+  const parent = db.prepare('SELECT * FROM transactions WHERE id = ?').get(parentId) as any
+  if (!parent) throw new Error('Transaction not found')
+
+  const tx = db.transaction(() => {
+    db.prepare('UPDATE transactions SET is_split = 1 WHERE id = ?').run(parentId)
+    for (const split of splits) {
+      const hash = createHash('sha256')
+        .update(`split-${parentId}-${split.description}-${split.amount}-${Date.now()}-${Math.random()}`)
+        .digest('hex').slice(0, 16)
+      db.prepare(`
+        INSERT INTO transactions (hash, date, description, amount, currency, source, category, split_from)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(hash, parent.date, split.description, split.amount, parent.currency, parent.source, split.category ?? null, parentId)
+    }
+  })
+  tx()
 }
 
 export function getAvailableMonths(): string[] {
