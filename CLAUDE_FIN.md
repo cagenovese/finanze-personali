@@ -194,7 +194,22 @@ finanze-personali/
 - USER_NAME hardcoded in Splitwise.tsx — da rendere configurabile in futuro
 - Piccoli dettagli UI da correggere in sessioni successive (segnalati dall'utente)
 
-**Prossima fase:** da definire — possibili miglioramenti: fix Splitwise bilanci, fix Trade Republic PDF, configurazione USER_NAME, inserimento spese manuali, ATM split
+**Prossima fase:** da definire — possibili miglioramenti: fix Splitwise bilanci, fix Trade Republic PDF, configurazione USER_NAME
+
+### Funzionalità aggiuntive ✅ (2026-03-23)
+
+**Completato:**
+- Aggiunta transazione manuale: modal con data, importo, descrizione, categoria, note; source = "Manuale"
+- Menu ⋮ per riga nella tabella transazioni (struttura pronta per future azioni)
+- Suddivisione transazione (ATM split): modal con N voci descrizione/importo/categoria, indicatore rimanente, salvataggio quando totale = importo originale
+- DB migration: colonne `is_split` e `split_from` aggiunte via PRAGMA table_info (safe su DB esistente)
+- Spending queries escludono `is_split = 1` per evitare doppio conteggio
+- Visual: padri suddivisi a opacità ridotta con badge "suddiviso"; figli con badge "split"
+
+**Note tecniche:**
+- Hash per transazioni manuali: `manual-${date}-${description}-${amount}-${Date.now()}`
+- Hash per figli split: include `Math.random()` per garantire unicità in caso di voci identiche
+- Il menu ⋮ chiude automaticamente al click fuori tramite `mousedown` listener sul document
 
 ## GitHub
 
