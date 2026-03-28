@@ -113,6 +113,9 @@ const CATEGORIES: [string, string[]][] = [
   ['Casa',            ['AFFITTO', 'IKEA']],
   ['Apprendimento',   ['UDEMY', 'COURSERA']],
   ['Tasse',           ['ADAC', 'VERSICHERUNG', 'RUNDFUNK', 'ACCOUNT MANAGEMENT']],
+  ['Spesa',           ['SUPERMARKT', 'SUPERMERCATO', 'MARKET']],
+  ['Drinks',          ['KNEIPE', 'PUB', 'BIERGARTEN']],
+  ['Stipendio',       []],
   ['Altro',           []],
 ]
 

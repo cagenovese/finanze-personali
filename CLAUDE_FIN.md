@@ -196,6 +196,21 @@ finanze-personali/
 
 **Prossima fase:** da definire — possibili miglioramenti: fix Splitwise bilanci, fix Trade Republic PDF, configurazione USER_NAME
 
+### Allineamento DB con Excel + Entrate Regolare/Irregolare ✅ (2026-03-28)
+
+**Completato:**
+- Script Python `/Users/carloalbertogenovese/Documents/SOLDI/import_from_excel.py` che elimina le transazioni Jan+Feb dal DB e reimporta dall'Excel (Finanze_Personali.xlsm)
+- Jan 2026: 95 transazioni, Feb 2026: 96 transazioni — corrispondenza esatta con Excel
+- Split ATM preservati: 3 genitori (is_split=1), 11 figli (split_from=parent_id) con SUDDIV IDs
+- Hash duplicati gestiti con suffix `_N` per i figli di split con hash uguale nel Excel
+- Categorie aggiunte: Spesa, Drinks, Stipendio (sia in db.ts che direttamente nel DB)
+- UI: colonna "Nec./Reg." mostra S/N per spese (Necessaria/Non necessaria) e R/I per entrate (Regolare/Irregolare), stessa codifica is_necessary 1/0/null
+
+**Note tecniche:**
+- is_necessary: Necessaria/Regolare → 1, Non Necessaria/Irregolare → 0, Suddiviso/parent → NULL
+- Le query report (getMonthlyNecessary, getSpendingByCategory) già corrette: filtrano amount < 0 per le spese, quindi le entrate con is_necessary=1 (Regolare) non inquinano i totali
+- Script da rieseguire se si modifica l'Excel; non tocca i mesi ≥ marzo
+
 ### Funzionalità aggiuntive ✅ (2026-03-23)
 
 **Completato:**

@@ -497,11 +497,21 @@ export default function Transactions() {
       },
       {
         accessorKey: 'is_necessary',
-        header: 'Nec.',
-        size: 60,
+        header: 'Nec./Reg.',
+        size: 72,
         cell: ({ row }) => {
           const tx = row.original
           const val = tx.is_necessary
+          const isIncome = tx.amount > 0
+
+          const label = isIncome
+            ? (val === 1 ? 'R' : val === 0 ? 'I' : '·')
+            : (val === 1 ? 'S' : val === 0 ? 'N' : '·')
+
+          const title = isIncome
+            ? (val === 1 ? 'Regolare' : val === 0 ? 'Irregolare' : 'Non classificata')
+            : (val === 1 ? 'Necessaria' : val === 0 ? 'Non necessaria' : 'Non classificata')
+
           return (
             <button
               onClick={() => {
@@ -515,9 +525,9 @@ export default function Transactions() {
                     ? 'bg-negative/15 border-negative/30 text-negative'
                     : 'bg-transparent border-bg-elevated text-text-muted hover:border-accent-dim'
               }`}
-              title={val === 1 ? 'Necessaria' : val === 0 ? 'Non necessaria' : 'Non classificata'}
+              title={title}
             >
-              {val === 1 ? 'S' : val === 0 ? 'N' : '·'}
+              {label}
             </button>
           )
         },
