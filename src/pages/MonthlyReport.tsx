@@ -50,8 +50,16 @@ export default function MonthlyReport() {
 
   useEffect(() => { reload() }, [reload])
 
-  const totalSpent = spending.reduce((s, r) => s + r.spent, 0)
+  // Use the necessary+unnecessary buckets as totalSpent: getSpendingByCategory
+  // excludes rows with category IS NULL, which would understate the total.
+  const totalSpent = necessary.necessary + necessary.unnecessary
   const saved = necessary.income - totalSpent
+
+  const categorizedSpent = spending.reduce((s, r) => s + r.spent, 0)
+  const uncategorizedSpent = Math.max(0, totalSpent - categorizedSpent)
+  const spendingForChart: SpendingEntry[] = uncategorizedSpent > 0.005
+    ? [...spending, { category: 'Senza categoria', spent: uncategorizedSpent }]
+    : spending
 
   const necessaryPie = [
     { name: 'Necessarie', value: necessary.necessary },
@@ -105,11 +113,11 @@ export default function MonthlyReport() {
         {/* Pie chart — spese per categoria */}
         <div className="p-4 rounded-card bg-bg-surface border border-bg-elevated">
           <p className="section-label mb-4">SPESE PER CATEGORIA</p>
-          {spending.length > 0 ? (
+          {spendingForChart.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie
-                  data={spending}
+                  data={spendingForChart}
                   dataKey="spent"
                   nameKey="category"
                   cx="50%"
@@ -117,7 +125,7 @@ export default function MonthlyReport() {
                   outerRadius={90}
                   innerRadius={40}
                 >
-                  {spending.map((_, i) => (
+                  {spendingForChart.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
@@ -166,11 +174,11 @@ export default function MonthlyReport() {
       </div>
 
       {/* Category breakdown table */}
-      {spending.length > 0 && (
+      {spendingForChart.length > 0 && (
         <>
           <p className="section-label mb-3">DETTAGLIO CATEGORIE</p>
           <div className="space-y-2">
-            {[...spending].sort((a, b) => b.spent - a.spent).map((row, i) => {
+            {[...spendingForChart].sort((a, b) => b.spent - a.spent).map((row, i) => {
               const pct = totalSpent > 0 ? (row.spent / totalSpent) * 100 : 0
               return (
                 <div key={row.category} className="flex items-center gap-3">

@@ -38,11 +38,20 @@ export interface ImportSourceResult {
 }
 
 /**
+ * Normalize a description for hash comparison: strip non-alphanumeric chars,
+ * collapse spaces, lowercase. This prevents duplicates from encoding differences
+ * (e.g. "D'AMPEZ" vs "DAMPEZ", "GENÈVE" vs "GEN√àVE").
+ */
+function normalizeDescription(s: string): string {
+  return s.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
  * Generate a deterministic hash for deduplication.
- * Based on source + date + description + amount.
+ * Based on source + date + normalized description + amount.
  */
 export function txHash(source: string, date: string, description: string, amount: number): string {
-  const raw = `${source}|${date}|${description}|${amount.toFixed(2)}`
+  const raw = `${source.toLowerCase()}|${date}|${normalizeDescription(description)}|${amount.toFixed(2)}`
   return createHash('sha256').update(raw).digest('hex').slice(0, 16)
 }
 

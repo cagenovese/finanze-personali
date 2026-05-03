@@ -33,6 +33,8 @@ export function parseN26File(filePath: string): ParsedTransaction[] {
 
   return data
     .filter(row => row['Booking Date'] && row['Amount (EUR)'])
+    // Skip credit card bill payments (internal transfers between accounts)
+    .filter(row => !/AMERICAN EXPRESS/i.test(row['Partner Name'] || ''))
     .map(row => {
       const date = row['Booking Date'].trim()
       const description = (row['Partner Name'] || row['Payment Reference'] || 'N26 Transaction').trim()

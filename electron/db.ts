@@ -92,6 +92,69 @@ function migrateSchema(db: Database.Database): void {
   if (!cols.includes('split_from')) {
     db.exec('ALTER TABLE transactions ADD COLUMN split_from INTEGER')
   }
+
+  // Normalize source names to lowercase and recalculate hashes (one-time migration)
+  const needsMigration = db.prepare(
+    "SELECT COUNT(*) as c FROM transactions WHERE source != LOWER(source)"
+  ).get() as { c: number }
+  if (needsMigration.c > 0) {
+    migrateSourceNormalization(db)
+  }
+}
+
+/**
+ * One-time migration: normalize source names to lowercase, remove duplicates,
+ * and recalculate hashes so the UNIQUE constraint works correctly.
+ */
+function migrateSourceNormalization(db: Database.Database): void {
+  const txn = db.transaction(() => {
+    // 1. Remove duplicates: keep the row with the lowest id (most likely to have user edits)
+    db.exec(`
+      DELETE FROM transactions WHERE id IN (
+        SELECT t1.id FROM transactions t1
+        WHERE EXISTS (
+          SELECT 1 FROM transactions t2
+          WHERE t2.date = t1.date
+            AND ABS(t2.amount - t1.amount) < 0.01
+            AND t2.description = t1.description
+            AND t2.id < t1.id
+        )
+      )
+    `)
+
+    // 2. Normalize source names
+    db.exec("UPDATE transactions SET source = 'amex' WHERE LOWER(source) = 'american express'")
+    db.exec("UPDATE transactions SET source = LOWER(source) WHERE source != LOWER(source)")
+
+    // 3. Remove encoding-based duplicates (e.g. "D'AMPEZ" vs "DAMPEZ")
+    //    Group by date + normalized description + amount, keep lowest id
+    const allRows = db.prepare('SELECT id, source, date, description, amount FROM transactions ORDER BY id').all() as any[]
+    const seen = new Map<string, number>()
+    const idsToDelete: number[] = []
+    for (const r of allRows) {
+      const normDesc = r.description.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+      const groupKey = `${r.date}|${normDesc}|${Number(r.amount).toFixed(2)}`
+      if (seen.has(groupKey)) {
+        idsToDelete.push(r.id)
+      } else {
+        seen.set(groupKey, r.id)
+      }
+    }
+    if (idsToDelete.length > 0) {
+      db.prepare(`DELETE FROM transactions WHERE id IN (${idsToDelete.join(',')})`).run()
+    }
+
+    // 4. Recalculate hashes with normalized source and description
+    const rows = db.prepare('SELECT id, source, date, description, amount FROM transactions').all() as any[]
+    const update = db.prepare('UPDATE transactions SET hash = ? WHERE id = ?')
+    for (const r of rows) {
+      const normDesc = r.description.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+      const raw = `${r.source.toLowerCase()}|${r.date}|${normDesc}|${Number(r.amount).toFixed(2)}`
+      const hash = createHash('sha256').update(raw).digest('hex').slice(0, 16)
+      update.run(hash, r.id)
+    }
+  })
+  txn()
 }
 
 const CATEGORIES: [string, string[]][] = [
@@ -367,7 +430,7 @@ export function getMonthlyNecessary(month: string): { necessary: number; unneces
       SUM(CASE WHEN amount < 0 AND (is_necessary = 0 OR is_necessary IS NULL) THEN ABS(amount) ELSE 0 END) as unnecessary,
       SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income
     FROM transactions
-    WHERE date >= ? AND date <= ?
+    WHERE date >= ? AND date <= ? AND is_split = 0
   `).get(dateFrom, dateTo) as any
   return {
     necessary: rows.necessary ?? 0,
@@ -390,7 +453,7 @@ export function getAnnualTrend(year: string): MonthlyTrend[] {
       SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as spent,
       SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income
     FROM transactions
-    WHERE substr(date, 1, 4) = ?
+    WHERE substr(date, 1, 4) = ? AND is_split = 0
     GROUP BY month
     ORDER BY month ASC
   `).all(year) as any[]

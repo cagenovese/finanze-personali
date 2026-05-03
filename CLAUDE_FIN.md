@@ -226,6 +226,33 @@ finanze-personali/
 - Hash per figli split: include `Math.random()` per garantire unicità in caso di voci identiche
 - Il menu ⋮ chiude automaticamente al click fuori tramite `mousedown` listener sul document
 
+### Fix risparmio mensile gen/feb 2026 ✅ (2026-05-03)
+
+**Problema riportato:** il "totale risparmiato" per gennaio e febbraio 2026 differiva tra app e Excel.
+
+**Diagnosi:**
+1. **Bug calcolo MonthlyReport** (`src/pages/MonthlyReport.tsx`): `totalSpent` era calcolato sommando `getSpending(month)`, che a sua volta filtra `category IS NOT NULL` (`db.ts:getSpendingByCategory`). Quindi le spese senza categoria venivano escluse dal "TOTALE SPESE" e dal "RISPARMIO", ma ancora conteggiate in `getMonthlyNecessary` (dove `is_necessary IS NULL` cade nel ramo `unnecessary`). La pagina Dashboard era invece corretta perché `getAnnualTrend` non filtra per categoria.
+2. **Bug dati**: 7 transazioni in DB per gen/feb avevano `category=NULL` e `is_necessary=NULL`, mentre in Excel erano tutte classificate (verosimilmente perché un re-import CSV dopo `import_from_excel.py` ha ricreato righe con descrizione contenente apostrofi senza ripassare dalla classificazione manuale Excel).
+
+**Fix:**
+- `src/pages/MonthlyReport.tsx`: `totalSpent = necessary.necessary + necessary.unnecessary` (allineato a Dashboard ed Excel `B11+B12`). Aggiunta fetta "Senza categoria" al pie chart "Spese per categoria" e alla breakdown table quando `totalSpent > Σ categorizzato`, così la somma delle fette torna sempre uguale al KPI "SPESE".
+- DB: script `patch_missing_classifications.py` (in `~/Documents/SOLDI/`) che fa match per `(date, normDesc, amount)` tra Excel e DB e copia `category`, `is_necessary`, `notes` solo dove DB è NULL. Backup creato come `finanze.db.backup-20260503-pre-patch`.
+
+**Verifica post-fix:**
+```
+Month      KPI                Excel        App         Δ
+2026-01    ENTRATE          4994.75     4994.75    +0.00  ✓
+2026-01    USCITE (TOT)     4052.58     4052.58    +0.00  ✓
+2026-01    RISPARMIO         942.17      942.17    +0.00  ✓
+2026-02    ENTRATE          5019.11     5019.11    +0.00  ✓
+2026-02    USCITE (TOT)     4182.17     4182.17    +0.00  ✓
+2026-02    RISPARMIO         836.94      836.94    +0.00  ✓
+```
+
+**Note tecniche / debt residuo:**
+- L'app ora è coerente con Excel **a patto che ogni transazione abbia `is_necessary` impostato**. Se ne arriva una con `is_necessary=NULL`, finisce in `unnecessary` (per via del CASE in `getMonthlyNecessary`); Excel invece la escluderebbe del tutto. Per ora va bene perché i dati attuali sono completi, ma è una potenziale fonte di divergenza futura.
+- La logica di hash anti-duplicato (`txHash` in `electron/parsers/types.ts`) normalizza già la descrizione, quindi nuovi re-import CSV non dovrebbero ricreare i duplicati. Il caso patchato qui è retroattivo: probabile importazione antecedente all'introduzione della normalizzazione.
+
 ## GitHub
 
 - Repo: https://github.com/cagenovese/finanze-personali

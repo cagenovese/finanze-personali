@@ -30,6 +30,8 @@ export function parseAmexFile(filePath: string): ParsedTransaction[] {
 
   return data
     .filter(row => row['Datum'] && row['Betrag'])
+    // Skip credit card bill payments (internal transfers, not real income)
+    .filter(row => !row['Beschreibung']?.includes('ZAHLUNG/ÜBERWEISUNG'))
     .map(row => {
       const date = parseDMYSlashDate(row['Datum'])
       const description = row['Beschreibung'].trim()
